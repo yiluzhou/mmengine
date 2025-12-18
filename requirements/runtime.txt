@@ -1,5 +1,5 @@
 addict
-matplotlib
+matplotlib>=3.9.0
 numpy
 pyyaml
 regex;sys_platform=='win32'

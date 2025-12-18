@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import copy
+import copy, shutil
 import logging
 import os
 import os.path as osp
@@ -2282,6 +2282,37 @@ class Runner:
         else:
             filename = f'{self.timestamp}.py'
         self.cfg.dump(osp.join(self.work_dir, filename))
+        # save meta file and annotation jsons if they exist
+        def _copy_if_exists(path: Optional[str]) -> Optional[str]:
+            if not path:
+                return None
+            if isinstance(path, (list, tuple)):
+                path = path[0]
+            if not isinstance(path, str) or not osp.isfile(path):
+                return None
+            dst = osp.join(self.work_dir, osp.basename(path))
+            shutil.copyfile(path, dst)
+            return dst
+
+        meta_path = getattr(self.cfg, 'dataset_meta', None)
+        copied_meta = _copy_if_exists(meta_path)
+        if copied_meta:
+            print(f'Successfully dumped meta file to {copied_meta}')
+
+        def _ann_from_dataloader(dataloader_cfg):
+            if not dataloader_cfg or not isinstance(dataloader_cfg, dict):
+                return None
+            dataset_cfg = dataloader_cfg.get('dataset')
+            if not dataset_cfg or not hasattr(dataset_cfg, 'get'):
+                return None
+            return dataset_cfg.get('ann_file')
+
+        for dl_cfg in [
+                getattr(self.cfg, 'train_dataloader', None),
+                getattr(self.cfg, 'val_dataloader', None),
+                getattr(self.cfg, 'test_dataloader', None)
+        ]:
+            _copy_if_exists(_ann_from_dataloader(dl_cfg))
 
     def _check_scheduler_cfg(
             self, param_scheduler: Optional[Union[dict, list,

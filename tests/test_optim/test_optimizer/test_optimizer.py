@@ -2,8 +2,9 @@
 import os
 import sys
 import unittest
+import warnings
 from unittest import TestCase
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import torch
 import torch.nn as nn
@@ -18,7 +19,8 @@ from mmengine.optim.optimizer.builder import (BITSANDBYTES_OPTIMIZERS,
                                               DADAPTATION_OPTIMIZERS,
                                               LION_OPTIMIZERS,
                                               TORCH_OPTIMIZERS,
-                                              TRANSFORMERS_OPTIMIZERS)
+                                              TRANSFORMERS_OPTIMIZERS,
+                                              register_bitsandbytes_optimizers)
 from mmengine.registry import DefaultScope, Registry, build_from_cfg
 from mmengine.testing._internal import MultiProcessTestCase
 from mmengine.utils.dl_utils import TORCH_VERSION, mmcv_full_available
@@ -50,7 +52,7 @@ def has_bitsandbytes() -> bool:
     try:
         import bitsandbytes  # noqa: F401
         return True
-    except ImportError:
+    except Exception:
         return False
 
 
@@ -262,6 +264,24 @@ class TestBuilder(TestCase):
         ]
         assert set(bitsandbytes_optimizers).issubset(
             set(BITSANDBYTES_OPTIMIZERS))
+
+    def test_register_bitsandbytes_optimizers_handles_errors(self):
+        """bitsandbytes wheels compiled for old NumPy may raise non-import
+        errors. Ensure we skip registration gracefully."""
+        real_import = __import__
+
+        def _mock_import(name, *args, **kwargs):
+            if name == 'bitsandbytes':
+                raise ValueError('ABI mismatch')
+            return real_import(name, *args, **kwargs)
+
+        with patch('builtins.__import__', side_effect=_mock_import):
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                warnings.simplefilter('always')
+                registered = register_bitsandbytes_optimizers()
+
+        assert registered == []
+        assert any('bitsandbytes' in str(w.message) for w in caught_warnings)
 
     @unittest.skipIf(not has_transformers(), 'transformers is not installed')
     def test_transformers_optimizers(self):

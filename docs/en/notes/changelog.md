@@ -1,5 +1,9 @@
 # Changelog of v0.x
 
+## Unreleased
+
+- Improve compatibility with NumPy 2.x by skipping broken optional bitsandbytes imports and requiring matplotlib>=3.9 for builds compiled against the new ABI.
+
 ## v0.10.5 (11/9/2024)
 
 - Fix `_is_builtin_module`. by [@HAOCHENYE](https://github.com/HAOCHENYE) in https://github.com/open-mmlab/mmengine/pull/1571

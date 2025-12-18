@@ -146,12 +146,17 @@ def register_bitsandbytes_optimizers() -> List[str]:
     Returns:
         List[str]: A list of registered optimizers' name.
     """
-    dadaptation_optimizers = []
+    bitsandbytes_optimizers: List[str] = []
     try:
         import bitsandbytes as bnb
     # import bnb may trigger cuda related error without nvidia gpu resources
     except (ImportError, RuntimeError):
-        pass
+        return bitsandbytes_optimizers
+    except Exception as e:  # pragma: no cover
+        warnings.warn(
+            'Failed to import bitsandbytes when registering optimizers, '
+            f'skip it. The original error was: {e!r}')
+        return bitsandbytes_optimizers
     else:
         optim_classes = inspect.getmembers(
             bnb.optim, lambda _optim: (inspect.isclass(_optim) and issubclass(
@@ -163,8 +168,8 @@ def register_bitsandbytes_optimizers() -> List[str]:
                 OPTIMIZERS.register_module(module=optim_cls, name=name)
             except Exception as e:
                 warnings.warn(f'Failed to import {optim_cls.__name__} for {e}')
-            dadaptation_optimizers.append(name)
-    return dadaptation_optimizers
+            bitsandbytes_optimizers.append(name)
+    return bitsandbytes_optimizers
 
 
 BITSANDBYTES_OPTIMIZERS = register_bitsandbytes_optimizers()
