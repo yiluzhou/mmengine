@@ -785,12 +785,11 @@ def save_checkpoint(checkpoint,
                 f.flush()
             model.create_file(checkpoint_file, name=model_name)
     else:
-        file_client = FileClient.infer_client(file_client_args, filename)
         if file_client_args is None:
             file_backend = get_file_backend(
                 filename, backend_args=backend_args)
         else:
-            file_backend = file_client
+            file_backend = FileClient.infer_client(file_client_args, filename)
 
         with io.BytesIO() as f:
             torch.save(checkpoint, f)

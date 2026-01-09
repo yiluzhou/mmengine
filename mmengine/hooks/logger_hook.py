@@ -134,12 +134,13 @@ class LoggerHook(Hook):
         self.json_log_path: Optional[str] = None
 
         if self.out_dir is not None:
-            self.file_client = FileClient.infer_client(file_client_args,
-                                                       self.out_dir)
             if file_client_args is None:
+                self.file_client = None
                 self.file_backend = get_file_backend(
                     self.out_dir, backend_args=backend_args)
             else:
+                self.file_client = FileClient.infer_client(file_client_args,
+                                                           self.out_dir)
                 self.file_backend = self.file_client
 
         self.log_metric_by_epoch = log_metric_by_epoch

@@ -267,16 +267,14 @@ class CheckpointHook(Hook):
         if self.out_dir is None:
             self.out_dir = runner.work_dir
 
-        # If self.file_client_args is None, self.file_client will not
-        # used in CheckpointHook. To avoid breaking backward compatibility,
-        # it will not be removed util the release of MMEngine1.0
-        self.file_client = FileClient.infer_client(self.file_client_args,
-                                                   self.out_dir)
-
+        # Avoid instantiating FileClient unless explicitly requested.
         if self.file_client_args is None:
+            self.file_client = None
             self.file_backend = get_file_backend(
                 self.out_dir, backend_args=self.backend_args)
         else:
+            self.file_client = FileClient.infer_client(self.file_client_args,
+                                                       self.out_dir)
             self.file_backend = self.file_client
 
         # if `self.out_dir` is not equal to `runner.work_dir`, it means that

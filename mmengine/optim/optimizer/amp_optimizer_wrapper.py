@@ -34,8 +34,8 @@ class AmpOptimWrapper(OptimWrapper):
 
     Args:
         loss_scale (float or str or dict): The initial configuration of
-            `torch.cuda.amp.GradScaler`. See more specific arguments
-            introduction at `PyTorch AMP <https://pytorch.org/docs/stable/amp.html?highlight=gradscalertorch.cuda.amp.GradScaler>`_ # noqa: E501
+            `torch.amp.GradScaler`. See more specific arguments introduction
+            at `PyTorch AMP <https://pytorch.org/docs/stable/amp.html>`_.
             Defaults to ``dynamic``.
 
             - "dynamic": Initialize GradScale without any arguments.
@@ -80,6 +80,7 @@ class AmpOptimWrapper(OptimWrapper):
         super().__init__(**kwargs)
         self._scale_update_param = None
 
+        scaler_args = ()
         if use_fsdp:
             if digit_version(torch.__version__) >= digit_version('2.0.0'):
                 from torch.distributed.fsdp.sharded_grad_scaler import \
@@ -90,18 +91,26 @@ class AmpOptimWrapper(OptimWrapper):
                     'PyTorch>=2.0.0 is required when sets `use_fsdp=True`')
         else:
             scaler_type = GradScaler
+            if (is_cuda_available()
+                    and not is_npu_available()
+                    and not is_mlu_available()
+                    and hasattr(torch, 'amp')
+                    and hasattr(torch.amp, 'GradScaler')):
+                scaler_type = torch.amp.GradScaler
+                scaler_args = ('cuda',)
 
         if loss_scale == 'dynamic':
             #  If loss_scale is a string, it must be 'dynamic', then dynamic
             #  loss scaling will be used.
-            self.loss_scaler = scaler_type()
+            self.loss_scaler = scaler_type(*scaler_args)
         elif isinstance(loss_scale, float):
             # Static loss scaling
             self._scale_update_param = loss_scale
-            self.loss_scaler = scaler_type(init_scale=loss_scale)
+            self.loss_scaler = scaler_type(*scaler_args,
+                                           init_scale=loss_scale)
         elif isinstance(loss_scale, dict):
             # More specific configuration.
-            self.loss_scaler = scaler_type(**loss_scale)
+            self.loss_scaler = scaler_type(*scaler_args, **loss_scale)
         else:
             raise TypeError('loss_scale must be of type float, dict, or '
                             f'"dynamic", but got {loss_scale}')
