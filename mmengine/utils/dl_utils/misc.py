@@ -1,5 +1,5 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import pkgutil
+import importlib.util
 from typing import Optional, Tuple, Union
 
 import numpy as np
@@ -106,5 +106,4 @@ def mmcv_full_available() -> bool:
         import mmcv  # noqa: F401
     except ImportError:
         return False
-    ext_loader = pkgutil.find_loader('mmcv._ext')
-    return ext_loader is not None
+    return importlib.util.find_spec('mmcv._ext') is not None

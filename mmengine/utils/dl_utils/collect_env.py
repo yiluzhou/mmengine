@@ -51,7 +51,11 @@ def collect_env():
             - OpenCV (optional): OpenCV version.
             - MMENGINE: MMENGINE version.
     """
-    from distutils import errors
+    try:
+        # Only provided by setuptools' shim on Python >= 3.12.
+        from distutils.errors import DistutilsPlatformError
+    except ImportError:
+        DistutilsPlatformError = OSError
 
     env_info = OrderedDict()
     env_info['sys.platform'] = sys.platform
@@ -140,7 +144,7 @@ def collect_env():
                 sys.stdout.fileno()) or locale.getpreferredencoding()
             env_info['MSVC'] = cc.decode(encoding).partition('\n')[0].strip()
             env_info['GCC'] = 'n/a'
-    except (subprocess.CalledProcessError, errors.DistutilsPlatformError):
+    except (subprocess.CalledProcessError, DistutilsPlatformError):
         env_info['GCC'] = 'n/a'
     except io.UnsupportedOperation as e:
         # JupyterLab on Windows changes sys.stdout, which has no `fileno` attr
